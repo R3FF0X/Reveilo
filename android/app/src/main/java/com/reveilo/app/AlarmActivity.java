@@ -106,7 +106,12 @@ public class AlarmActivity extends Activity {
 
     private void startRinging() {
         try {
+            // Le son actuellement choisi par l'utilisateur dans Paramètres > Sons > Son
+            // d'alarme (le même que celui utilisé par l'appli horloge native d'Android).
             Uri alarmUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
+            if (alarmUri == null) {
+                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            }
             if (alarmUri == null) {
                 alarmUri = RingtoneManager.getValidRingtoneUri(this);
             }
@@ -126,7 +131,7 @@ public class AlarmActivity extends Activity {
             mediaPlayer.prepare();
             mediaPlayer.start();
         } catch (Exception e) {
-            // le son n'a pas pu démarrer, la vibration prend le relais
+            android.util.Log.e("Reveilo", "Impossible de démarrer le son d'alarme", e);
         }
 
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);

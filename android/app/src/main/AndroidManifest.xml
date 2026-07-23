@@ -39,7 +39,7 @@
             android:exported="false"
             android:launchMode="singleInstance"
             android:excludeFromRecents="true"
-            android:theme="@style/AppTheme.NoActionBarLaunch" />
+            android:theme="@style/AlarmActivityTheme" />
 
         <receiver
             android:name=".AlarmReceiver"

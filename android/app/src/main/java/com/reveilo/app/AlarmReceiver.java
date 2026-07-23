@@ -19,7 +19,9 @@ import androidx.core.app.NotificationCompat;
  * les appels entrants ou les vrais réveils.
  */
 public class AlarmReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID = "reveilo_alarms";
+    // "_v2" pour forcer la recréation du canal : Android ne met jamais à jour
+    // le son/importance d'un canal de notification déjà créé sur l'appareil.
+    private static final String CHANNEL_ID = "reveilo_alarms_v2";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -76,6 +78,9 @@ public class AlarmReceiver extends BroadcastReceiver {
                 channel.setDescription("Utilisé pour déclencher l'écran de sonnerie des alarmes");
                 channel.setBypassDnd(true);
                 channel.enableVibration(false);
+                // Le son de l'alarme est joué par AlarmActivity (son "alarme" en boucle) :
+                // le canal reste silencieux pour ne pas superposer un bref bip de notification.
+                channel.setSound(null, null);
                 notificationManager.createNotificationChannel(channel);
             }
         }

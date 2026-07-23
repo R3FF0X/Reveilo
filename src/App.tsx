@@ -11,7 +11,6 @@ import {
   syncNativeAlarms,
   ensureNotificationPermission,
   ensureExactAlarmPermission,
-  requestBatteryOptimizationExemption,
 } from "./nativeAlarms";
 
 const STORAGE_KEY = "reveilo-alarms";
@@ -46,7 +45,6 @@ function App() {
   useEffect(() => {
     ensureNotificationPermission();
     ensureExactAlarmPermission();
-    requestBatteryOptimizationExemption();
   }, []);
 
   function addAlarm(newAlarm: Omit<Alarm, "id">) {

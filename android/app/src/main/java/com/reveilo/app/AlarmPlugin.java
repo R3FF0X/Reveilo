@@ -77,18 +77,4 @@ public class AlarmPlugin extends Plugin {
         }
         call.resolve();
     }
-
-    @PluginMethod
-    public void requestBatteryOptimizationExemption(PluginCall call) {
-        Context context = getContext();
-        try {
-            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-            intent.setData(Uri.parse("package:" + context.getPackageName()));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
-        } catch (Exception e) {
-            // certains appareils/ROM ne supportent pas cette action
-        }
-        call.resolve();
-    }
 }

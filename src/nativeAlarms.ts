@@ -6,7 +6,6 @@ interface AlarmRingerPlugin {
   ensureNotificationPermission(): Promise<void>;
   canScheduleExactAlarms(): Promise<{ value: boolean }>;
   requestExactAlarmPermission(): Promise<void>;
-  requestBatteryOptimizationExemption(): Promise<void>;
 }
 
 const AlarmRinger = registerPlugin<AlarmRingerPlugin>("AlarmRinger");
@@ -39,16 +38,6 @@ export async function ensureExactAlarmPermission(): Promise<void> {
     if (!value) {
       await AlarmRinger.requestExactAlarmPermission();
     }
-  } catch {
-    // ignore hors plateforme native
-  }
-}
-
-// Demande l'exemption d'optimisation de batterie, essentielle sur MIUI qui
-// tue sinon agressivement les alarmes en arrière-plan.
-export async function requestBatteryOptimizationExemption(): Promise<void> {
-  try {
-    await AlarmRinger.requestBatteryOptimizationExemption();
   } catch {
     // ignore hors plateforme native
   }

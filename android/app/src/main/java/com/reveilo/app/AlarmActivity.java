@@ -2,16 +2,12 @@ package com.reveilo.app;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
+import android.content.Intent;
 import android.graphics.Color;
-import android.media.AudioAttributes;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.net.Uri;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -19,21 +15,15 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * Écran de sonnerie plein écran : s'affiche par-dessus le verrouillage, joue
- * un son en boucle sur le flux "alarme" (qui passe outre le mode silencieux)
- * et fait vibrer le téléphone, jusqu'à ce que l'utilisateur appuie sur
- * "Arrêter". Si l'alarme est récurrente, reprogramme alors sa prochaine
- * occurrence.
+ * Écran de sonnerie plein écran : s'affiche par-dessus le verrouillage. Le
+ * son et la vibration sont gérés par AlarmRingingService (qui continue même
+ * si cet écran ne s'affiche pas) ; cette activité ne fait qu'afficher
+ * l'heure/le titre et proposer le bouton "Arrêter".
  */
 public class AlarmActivity extends Activity {
-    private MediaPlayer mediaPlayer;
-    private Vibrator vibrator;
-
     private String id;
     private String time;
     private String label;
-    private String weekParity;
-    private int[] repeatDays;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +47,6 @@ public class AlarmActivity extends Activity {
         id = getIntent().getStringExtra("id");
         time = getIntent().getStringExtra("time");
         label = getIntent().getStringExtra("label");
-        weekParity = getIntent().getStringExtra("weekParity");
-        repeatDays = getIntent().getIntArrayExtra("repeatDays");
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -89,105 +77,37 @@ public class AlarmActivity extends Activity {
         Button stopButton = new Button(this);
         stopButton.setText("Arrêter");
         stopButton.setTextColor(Color.WHITE);
-        stopButton.setBackgroundColor(Color.parseColor("#ea580c"));
+        stopButton.setAllCaps(false);
+
+        GradientDrawable buttonBackground = new GradientDrawable();
+        buttonBackground.setColor(Color.parseColor("#ea580c"));
+        buttonBackground.setCornerRadius(dp(24));
+        stopButton.setBackground(buttonBackground);
+
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            300
+            (int) dp(56)
         );
-        buttonParams.topMargin = 96;
+        buttonParams.topMargin = (int) dp(48);
         stopButton.setLayoutParams(buttonParams);
         stopButton.setOnClickListener(v -> stopAlarm());
         layout.addView(stopButton);
 
         setContentView(layout);
-
-        startRinging();
     }
 
-    private void startRinging() {
-        try {
-            // Le son actuellement choisi par l'utilisateur dans Paramètres > Sons > Son
-            // d'alarme (le même que celui utilisé par l'appli horloge native d'Android).
-            Uri alarmUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            }
-            if (alarmUri == null) {
-                alarmUri = RingtoneManager.getValidRingtoneUri(this);
-            }
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(this, alarmUri);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                mediaPlayer.setAudioAttributes(
-                    new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                );
-            } else {
-                mediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
-            }
-            mediaPlayer.setLooping(true);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        } catch (Exception e) {
-            android.util.Log.e("Reveilo", "Impossible de démarrer le son d'alarme", e);
-        }
-
-        vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-        if (vibrator != null) {
-            long[] pattern = {0, 500, 500};
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
-            } else {
-                vibrator.vibrate(pattern, 0);
-            }
-        }
+    private float dp(float value) {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, getResources().getDisplayMetrics());
     }
 
     private void stopAlarm() {
-        if (mediaPlayer != null) {
-            try {
-                if (mediaPlayer.isPlaying()) mediaPlayer.stop();
-                mediaPlayer.release();
-            } catch (Exception e) {
-                // ignore
-            }
-            mediaPlayer = null;
+        Intent stopIntent = new Intent(this, AlarmRingingService.class);
+        stopIntent.setAction(AlarmRingingService.ACTION_STOP);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(stopIntent);
+        } else {
+            startService(stopIntent);
         }
-        if (vibrator != null) {
-            vibrator.cancel();
-        }
-
-        if (id != null) {
-            android.app.NotificationManager notificationManager =
-                (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
-                notificationManager.cancel(id.hashCode());
-            }
-        }
-
-        if (id != null && time != null && repeatDays != null && repeatDays.length > 0) {
-            AlarmScheduler.scheduleNext(getApplicationContext(), id, time, repeatDays, weekParity, label);
-        }
-
         finish();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mediaPlayer != null) {
-            try {
-                if (mediaPlayer.isPlaying()) mediaPlayer.stop();
-                mediaPlayer.release();
-            } catch (Exception e) {
-                // ignore
-            }
-            mediaPlayer = null;
-        }
-        if (vibrator != null) {
-            vibrator.cancel();
-        }
     }
 }

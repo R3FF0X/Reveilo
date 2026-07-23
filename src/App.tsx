@@ -5,11 +5,18 @@ import ClockLogo from "./ClockLogo";
 import AlarmCard from "./AlarmCard";
 import AlarmForm from "./AlarmForm";
 import UpcomingAlarmsList from "./UpcomingAlarmsList";
-import Modal from "./Modal";
+import BottomSheetModal from "./BottomSheetModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import {
+  syncNativeAlarms,
+  ensureNotificationPermission,
+  ensureExactAlarmPermission,
+  requestBatteryOptimizationExemption,
+} from "./nativeAlarms";
 
 const STORAGE_KEY = "reveilo-alarms";
 const UPCOMING_WINDOW_DAYS = 21;
+const MAX_ALARMS = 20;
 
 function loadAlarms(): Alarm[] {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -32,7 +39,18 @@ function App() {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    syncNativeAlarms(alarms);
+  }, [alarms]);
+
+  useEffect(() => {
+    ensureNotificationPermission();
+    ensureExactAlarmPermission();
+    requestBatteryOptimizationExemption();
+  }, []);
+
   function addAlarm(newAlarm: Omit<Alarm, "id">) {
+    if (alarms.length >= MAX_ALARMS) return;
     const alarm: Alarm = { ...newAlarm, id: crypto.randomUUID() };
     setAlarms((prev) => [...prev, alarm]);
     setIsAdding(false);
@@ -68,6 +86,7 @@ function App() {
   );
   const isFormOpen = isAdding || editingId !== null;
   const upcoming = getUpcomingOccurrences(alarms, now, UPCOMING_WINDOW_DAYS);
+  const canAddMore = alarms.length < MAX_ALARMS;
 
   return (
     <div className="h-screen bg-[#1b1d21] flex flex-col overflow-hidden">
@@ -77,7 +96,7 @@ function App() {
       </header>
 
       {isFormOpen && (
-        <Modal onClose={closeForm}>
+        <BottomSheetModal onClose={closeForm}>
           {(close) => (
             <>
               <h2 className="text-white text-base font-semibold mb-3">
@@ -97,7 +116,7 @@ function App() {
               />
             </>
           )}
-        </Modal>
+        </BottomSheetModal>
       )}
 
       {pendingDeleteAlarm && (
@@ -127,16 +146,22 @@ function App() {
                 onToggleEnabled={toggleEnabled}
               />
             ))}
-
-            <button
-              onClick={() => setIsAdding(true)}
-              className="min-h-[128px] rounded-2xl border-2 border-dashed border-neutral-700 text-neutral-500 hover:text-white hover:border-neutral-500 text-3xl flex items-center justify-center active:scale-[0.98] transition-transform duration-100"
-            >
-              +
-            </button>
           </div>
         </main>
       </div>
+
+      <button
+        onClick={() => canAddMore && setIsAdding(true)}
+        disabled={!canAddMore}
+        aria-label="Ajouter une alarme"
+        className={`fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full text-white text-3xl leading-none shadow-lg flex items-center justify-center transition-transform duration-100 ${
+          canAddMore
+            ? "bg-orange-600 hover:bg-orange-500 active:scale-90"
+            : "bg-neutral-700 opacity-60 cursor-not-allowed"
+        }`}
+      >
+        +
+      </button>
     </div>
   );
 }

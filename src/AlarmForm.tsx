@@ -2,6 +2,13 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { Alarm, WeekParity } from "./types";
 import { DAY_LABELS, WEEK_ORDER } from "./types";
+import Select from "./Select";
+
+const WEEK_PARITY_OPTIONS: { value: WeekParity; label: string }[] = [
+  { value: "all", label: "Toutes les semaines" },
+  { value: "even", label: "Semaines paires" },
+  { value: "odd", label: "Semaines impaires" },
+];
 
 type Props = {
   initialAlarm?: Alarm;
@@ -21,7 +28,7 @@ function AlarmForm({ initialAlarm, onSubmit, onCancel }: Props) {
   const [weekParity, setWeekParity] = useState<WeekParity>(
     initialAlarm?.weekParity ?? "all",
   );
-  const [enabled, setEnabled] = useState(initialAlarm?.enabled ?? true);
+  const enabled = initialAlarm?.enabled ?? true;
 
   function toggleDay(day: number) {
     setRepeatDays((prev) =>
@@ -83,27 +90,13 @@ function AlarmForm({ initialAlarm, onSubmit, onCancel }: Props) {
           <label className="text-neutral-300 text-sm block mb-2">
             Fréquence
           </label>
-          <select
+          <Select
             value={weekParity}
-            onChange={(e) => setWeekParity(e.target.value as WeekParity)}
-            className="w-full bg-neutral-900 border-none rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/30"
-          >
-            <option value="all">Toutes les semaines</option>
-            <option value="even">Semaines paires</option>
-            <option value="odd">Semaines impaires</option>
-          </select>
+            options={WEEK_PARITY_OPTIONS}
+            onChange={setWeekParity}
+          />
         </div>
       )}
-
-      <label className="flex items-center justify-between bg-neutral-800 rounded-xl px-4 py-3 cursor-pointer">
-        <span className="text-neutral-300 text-sm">Activée</span>
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-          className="w-4 h-4 accent-orange-600"
-        />
-      </label>
 
       <div className="flex gap-2 pt-1">
         <button
